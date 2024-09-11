@@ -12,22 +12,69 @@ app.use(
 
 const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
 
+app.post("/create-checkout-session/:subject", async (req, res) => {
+  try {
+    const subject = req.params.subject;
+    const { price } = req.body;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "eur",
+            product_data: {
+              name: subject,
+            },
+            unit_amount: price,
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.CLIENT_URL}/profile?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/souscription`,
+    });
+
+    res.json({ url: session.url });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/get-payment-details', async (req, res) => {
+  try {
+    const sessionId = req.body.sessionId;
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    const paymentIntentId = session.payment_intent;
+
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    res.json({ paymentIntent });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des détails du paiement :', error);
+    res.status(500).json({ error: 'Une erreur est survenue lors de la récupération des détails du paiement.' });
+  }
+});
+
 app.post("/create-subscription/:subject", async (req, res) => {
   try {
     const subject = req.params.subject;
-    const additionalData = req.body.additionalData;
+    const { price } = req.body;
 
     const product = await stripe.products.create({
       name: subject,
     });
 
-    const price = await stripe.prices.create({
+    const stripePrice = await stripe.prices.create({
       product: product.id,
       currency: "eur",
       recurring: {
         interval: "month",
       },
-      unit_amount: 1000, // Montant en centimes (500 = 5€)
+      unit_amount: price, // Montant en centimes (500 = 5€)
     });
 
     const session = await stripe.checkout.sessions.create({
@@ -35,12 +82,12 @@ app.post("/create-subscription/:subject", async (req, res) => {
       mode: "subscription",
       line_items: [
         {
-          price: price.id,
+          price: stripePrice.id,
           quantity: 1,
         },
       ],
-      success_url: `${process.env.CLIENT_URL}/subdetails?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/profile`,
+      success_url: `${process.env.CLIENT_URL}/profile?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/souscription`,
     });    
 
     res.json({ url: session.url });
@@ -63,6 +110,19 @@ app.post('/get-subscription-details', async (req, res) => {
   } catch (error) {
     console.error("Erreur lors de la récupération des détails de l'abonnement :", error);
     res.status(500).json({ error: "Une erreur est survenue lors de la récupération des détails de l'abonnement." });
+  }
+});
+
+app.post('/get-session-details', async (req, res) => {
+  try {
+    const sessionId = req.body.sessionId;
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    res.json({ session });
+  } catch (error) {
+    console.error('Erreur lors de la récupération de la session :', error);
+    res.status(500).json({ error: 'Une erreur est survenue lors de la récupération de la session.' });
   }
 });
 
