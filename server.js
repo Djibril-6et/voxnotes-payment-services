@@ -64,7 +64,7 @@ app.post("/create-checkout-session/:subject", async (req, res) => {
 
     // Intégration du bloc try...catch pour l'appel à l'API du serveur BDD
     try {
-      const dbResponse = await axios.post('http://localhost:9090/api/subscriptions', paymentData);
+      const dbResponse = await axios.post(`${process.env.BDD_URL}/api/subscriptions`, paymentData);
 
       console.log("Réponse du serveur BDD:", dbResponse.status, dbResponse.data);
 
@@ -156,7 +156,7 @@ app.post("/create-subscription/:subject", async (req, res) => {
 
     // Intégration du bloc try...catch pour l'appel à l'API du serveur BDD
     try {
-      const dbResponse = await axios.post('http://localhost:9090/api/subscriptions', subscriptionData);
+      const dbResponse = await axios.post(`${process.env.BDD_URL}/api/subscriptions`, subscriptionData);
       
       console.log("Réponse du serveur BDD:", dbResponse.status, dbResponse.data);
 
@@ -242,5 +242,7 @@ app.post('/get-session-details', async (req, res) => {
   }
 });
 
-
-app.listen(4040);
+const PORT = process.env.PORT || 4040;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
