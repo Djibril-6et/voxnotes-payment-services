@@ -242,6 +242,54 @@ app.post('/get-session-details', async (req, res) => {
   }
 });
 
+app.post('/cancel-subscription', async (req, res) => {
+  try {
+    const { stripeSessionId } = req.body;
+
+    if (!stripeSessionId) {
+      return res.status(400).json({ error: "Stripe Session ID is required" });
+    }
+
+    // Récupérer la session Stripe pour obtenir l'ID d'abonnement
+    const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
+    
+    if (!session.subscription) {
+      return res.status(400).json({ error: "No subscription found for this session." });
+    }
+
+    const subscriptionId = session.subscription;
+
+    // Annuler l'abonnement via Stripe
+    const canceledSubscription = await stripe.subscriptions.del(subscriptionId);
+
+    console.log('Abonnement annulé avec succès:', canceledSubscription.id);
+
+    // Envoi de l'annulation au serveur BDD en utilisant stripeSessionId
+    const cancelData = {
+      stripeSessionId: stripeSessionId, // Utiliser stripeSessionId pour la requête PUT
+      status: 'cancelled',
+    };
+
+    console.log("Envoi des données d'annulation au serveur BDD:", cancelData);
+
+    try {
+      const dbResponse = await axios.put(`${process.env.BDD_URL}/api/subscriptions/${stripeSessionId}/cancel`, cancelData);
+
+      if (dbResponse.status === 200) {
+        res.json({ message: 'Subscription cancelled successfully.' });
+      } else {
+        res.status(500).json({ error: 'Échec de la mise à jour de la base de données.' });
+      }
+    } catch (dbError) {
+      console.error('Erreur lors de la mise à jour de l\'abonnement dans la base de données:', dbError);
+      res.status(500).json({ error: 'Échec de la mise à jour de la base de données après l\'annulation.' });
+    }
+  } catch (e) {
+    console.error('Erreur lors de l\'annulation de l\'abonnement :', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 const PORT = process.env.PORT || 4040;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
