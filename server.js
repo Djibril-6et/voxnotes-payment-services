@@ -264,25 +264,21 @@ app.post('/cancel-subscription', async (req, res) => {
 
     console.log('Abonnement annulé avec succès:', canceledSubscription.id);
 
-    // Envoi de l'annulation au serveur BDD en utilisant stripeSessionId
-    const cancelData = {
-      stripeSessionId: stripeSessionId, // Utiliser stripeSessionId pour la requête PUT
-      status: 'cancelled',
-    };
-
-    console.log("Envoi des données d'annulation au serveur BDD:", cancelData);
+    // Envoyer la requête de suppression au serveur BDD en utilisant stripeSessionId
+    console.log(`Suppression de la souscription avec stripeSessionId: ${stripeSessionId}`);
 
     try {
-      const dbResponse = await axios.put(`${process.env.BDD_URL}/api/subscriptions/${stripeSessionId}/cancel`, cancelData);
+      // Appeler l'API pour supprimer l'abonnement dans la base de données
+      const dbResponse = await axios.delete(`${process.env.BDD_URL}/api/subscriptions/${stripeSessionId}`);
 
       if (dbResponse.status === 200) {
-        res.json({ message: 'Subscription cancelled successfully.' });
+        res.json({ message: 'Subscription deleted successfully from the database.' });
       } else {
-        res.status(500).json({ error: 'Échec de la mise à jour de la base de données.' });
+        res.status(500).json({ error: 'Failed to delete subscription from the database.' });
       }
     } catch (dbError) {
-      console.error('Erreur lors de la mise à jour de l\'abonnement dans la base de données:', dbError);
-      res.status(500).json({ error: 'Échec de la mise à jour de la base de données après l\'annulation.' });
+      console.error('Erreur lors de la suppression de la souscription dans la base de données:', dbError);
+      res.status(500).json({ error: 'Failed to delete subscription from the database after Stripe cancellation.' });
     }
   } catch (e) {
     console.error('Erreur lors de l\'annulation de l\'abonnement :', e);
