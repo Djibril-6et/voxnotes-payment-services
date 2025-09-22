@@ -50,6 +50,14 @@ CLIENT_URL=http://localhost:9010
 PORT=9030
 ```
 
+## 🤝 Integration with Other Services
+
+This service integrates with:
+- **Database Service (9090):** Subscription management
+- **[Frontend Application](https://github.com/Djibril-6et/voxnotes):** User interface and redirects to port 9010
+- **Stripe API:** Payment processing
+- **OAuth Service:** User authentication (indirectly via userId)
+
 ## 🚀 Running the Service
 
 ### Development Mode
